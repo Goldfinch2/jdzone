@@ -8,9 +8,9 @@ jdzone [options]
 
   --help
   
-  --verbose                                             Verbose mode.
+  --verbose                                           Verbose mode.
   
-  --brief                                               Concise mode.
+  --brief                                             Concise mode.
   
   [--dev=/dev/input/eventn] --show                    Show the calibration values for the specified joystick.
   
