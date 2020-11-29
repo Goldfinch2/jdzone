@@ -1,9 +1,9 @@
-all : jinfo
+all : jdzone
 
 jinfo: jinfo.c
-	gcc -Wall -g3 -o jinfo jinfo.c
+	gcc -Wall -g3 -o jdzone jdzone.c
 
-jinfo-static: jinfo.c
-	gcc -Wall -o jinfo jinfo.c 
+jinfo-static: jdzone.c
+	gcc -Wall -o jdzone jdzone.c 
 clean:
-	rm -rf jinfo
+	rm -rf jdzone
