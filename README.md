@@ -7,6 +7,7 @@ jdzone [options]
 [options] are:
 
   --help
+  
   --verbose                                             Verbose mode.
   
   --brief                                               Concise mode.
