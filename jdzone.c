@@ -32,103 +32,103 @@ void print_axis_index(int index)
 {
     switch (index)  {
         case ABS_X :
-            printf("x: ");
+            printf(" X:        ");
             break;
 
         case ABS_Y :
-            printf("y: ");
+            printf(" Y:        ");
             break;
 
         case ABS_Z :
-            printf("z: ");
+            printf(" Z:        ");
             break;
 
         case ABS_RX :
-            printf("x rate: ");
+            printf(" XRATE:    ");
             break;
 
         case ABS_RY :
-            printf("y rate: ");
+            printf(" YRATE:    ");
             break;
 
         case ABS_RZ :
-            printf("z rate: ");
+            printf(" ZRATE:    ");
             break;
 
         case ABS_THROTTLE :
-            printf("throttle: ");
+            printf(" THROTTLE: ");
             break;
 
         case ABS_RUDDER :
-            printf("rudder: ");
+            printf(" RUDDER:   ");
             break;
 
         case ABS_WHEEL :
-            printf("wheel: ");
+            printf(" WHEEL:    ");
             break;
 
         case ABS_GAS :
-            printf("accel: ");
+            printf(" ACCEL:    ");
             break;
 
         case ABS_BRAKE :
-            printf("brake: ");
+            printf(" BRAKE:    ");
             break;
 
         case ABS_HAT0X :
-            printf("hat zero,x: ");
+            printf(" H0X:      ");
             break;
 
         case ABS_HAT0Y :
-            printf("hat zero,y: ");
+            printf(" H0Y:      ");
             break;
 
         case ABS_HAT1X :
-            printf("hat one,x: ");
+            printf(" H1X:      ");
             break;
 
         case ABS_HAT1Y :
-            printf("hat one,y: ");
+            printf(" H1Y:      ");
             break;
 
         case ABS_HAT2X :
-            printf("hat two,x: ");
+            printf(" H2X:      ");
             break;
 
         case ABS_HAT2Y :
-            printf("hat two,y: ");
+            printf(" H2Y:      ");
             break;
 
         case ABS_HAT3X :
-            printf("hat three,x: ");
+            printf(" H3X:      ");
             break;
 
         case ABS_HAT3Y :
-            printf("hat three,y: ");
+            printf(" H3Y:      ");
             break;
 
         case ABS_PRESSURE :
-            printf("pressure:");
+            printf(" PRESSURE: ");
             break;
 
         case ABS_DISTANCE :
-            printf("distance: ");
+            printf(" DISTANCE: ");
             break;
 
         case ABS_TILT_X :
-            printf("tilt,x: ");
+            printf(" TILTX:    ");
             break;
 
         case ABS_TILT_Y :
-            printf("tilt,y: ");
+            printf(" TILTY:    ");
             break;
 
         case ABS_MISC :
-            printf("misc: ");
+            printf(" MISC:     ");
             break;
 
         default:
-            printf("unk: ");
+            printf(" UNK:      ");
             break;
     }
 }
@@ -144,27 +144,26 @@ int show_calibration(char *evdev)
     int     ret = 1;
 
     if ((fd = open(evdev, O_RDONLY)) < 0) {
-        perror("open");
+        perror("    Open");
         goto END;
     }
 
     memset(abs_bitmask, 0, sizeof(abs_bitmask));
     if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(abs_bitmask)), abs_bitmask) < 0) {
-        perror("get features mask");
+        // perror("Get features mask");
         goto END;
     }
 
-    printf("Supported absolute axes:\n");
     for (yalv = 0; yalv < ABS_MAX; yalv++) {
         if (test_bit(yalv, abs_bitmask)) {
-            printf("absolute axis 0x%02x (%d)", yalv, yalv);
+            printf("    %2u=", yalv);
             print_axis_index(yalv);
             if (ioctl(fd, EVIOCGABS(yalv), &abs_features)) {
-                perror("get features");
+                perror("    Get features");
                 goto END;
             }
             deadzone_percent = (float)abs_features.flat*100/(float)abs_features.maximum;
-            printf("(min: %d, max: %d, deadzone: %d (=%.2f%%), fuzz: %d)\n",
+            printf("[MIN:%-4d MAX:%-4d DEADZONE:%-3d(=%.2f%%) FUZZ:%d]\n",
                     abs_features.minimum,
                     abs_features.maximum,
                     abs_features.flat,
@@ -182,50 +181,61 @@ END:
 }
 
 
-int set_dead_zone_value(char *evdev, int axisindex, int32_t deadzonevalue)
+int set_dead_zone_value(char *dev, int axisindex, int32_t deadzonevalue)
 {
     int                  fd = -1;
     uint8_t              abs_bitmask[ABS_MAX/8 + 1];
     float                deadzone_percent;
     struct input_absinfo abs_features;
     int                  ret = 1;
+    int                  min_axis, max_axis;
 
-    if ((fd = open(evdev, O_RDONLY)) < 0) {
-        perror("open");
+    if ((fd = open(dev, O_RDONLY)) < 0) {
+        perror("    Open");
         goto END;
     }
 
     memset(abs_bitmask, 0, sizeof(abs_bitmask));
     if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(abs_bitmask)), abs_bitmask) < 0) {
-        perror("get features mask");
+        // perror("    Get features mask");
         goto END;
     }
-    if (axisindex < ABS_MAX) {
+    if (axisindex == -1) {
+        min_axis = 0; 
+        max_axis = ABS_MAX - 1;
+    }
+    else {
+        if (axisindex >= ABS_MAX) {
+            goto END;
+        }
+        min_axis = axisindex;
+        max_axis = axisindex;
+    }
+    for (axisindex = min_axis ; axisindex <= max_axis ; axisindex++) {
         if (test_bit(axisindex, abs_bitmask)) {
             /* this means that the bit is set in the axes list */
-            printf("absolute axis 0x%02x (%d)", axisindex, axisindex);
+            printf("    %2u=", axisindex);
             print_axis_index(axisindex);
 
             if(ioctl(fd, EVIOCGABS(axisindex), &abs_features)) {
-                perror("get features");
+                // perror("    Get features");
                 goto END;
             }
-            if ( deadzonevalue < abs_features.minimum || deadzonevalue > abs_features.maximum ) {
-                printf("deadzone value must be between %d and %d for this axis, value requested : %d\n",abs_features.minimum,abs_features.maximum,deadzonevalue);
+            if (deadzonevalue < abs_features.minimum || deadzonevalue > abs_features.maximum) {
+                printf("    Deadzone value must be between %d and %d for this axis, value requested : %d\n",abs_features.minimum,abs_features.maximum,deadzonevalue);
                 goto END;
             }
-            printf("Setting deadzone value to : %d\n",deadzonevalue);
             abs_features.flat=deadzonevalue;
             if(ioctl(fd, EVIOCSABS(axisindex), &abs_features)) {
-                perror("set features");
+                perror("    Set features");
                 goto END;
             }
             if(ioctl(fd, EVIOCGABS(axisindex), &abs_features)) {
-                perror("get features");
+                perror("    Get features");
                 goto END;
             }
             deadzone_percent=(float)abs_features.flat*100/(float)abs_features.maximum;
-            printf("(min: %d, max: %d, deadzone: %d (=%.2f%%), fuzz: %d)\n",
+            printf("[MIN:%-4d MAX:%-4d DEADZONE:%-3d(=%.2f%%) FUZZ:%d]\n",
                     abs_features.minimum,
                     abs_features.maximum,
                     abs_features.flat,
@@ -247,35 +257,34 @@ void help()
     printf("jdzone [options]\n\n");
     printf("[options] are:  \n");    
     printf("  --help      \n");
-    printf("  --verbose  verbose mode.\n");
-    printf("  --brief    concise mode.\n");
-    printf("  --showcalibration=/dev/input/<eventn>  show the calibration values for the specified joystick.\n");
-    printf("  [--evdev=/dev/input/<eventn>] --deadzone=value [--axis=index] set the deadzone value (for specific axis).\n");
+    printf("  --verbose                                             Verbose mode.\n");
+    printf("  --brief                                               Concise mode.\n");
+    printf("  [--dev=/dev/input/<eventn>] --show                    Show the calibration values for the specified joystick.\n");
+    printf("  [--dev=/dev/input/<eventn>] --dz=value [--axis=index] Set the deadzone value (for specific axis).\n");
     printf("\n\n");
 }
 
 int main (int argc, char **argv)
 {
-    char *evdevice;
-    int c;
-    int32_t flat;
-    int axisindex;
-    bool setdeadzone;
-    axisindex = 0;
-    setdeadzone = false;
-    evdevice = NULL;
+    char          *dev = NULL;
+    int            c;
+    int32_t        flat;
+    int            axisindex = -1;
+    bool           setdeadzone=false;
+    bool           show=false;
     DIR           *d = NULL;
     struct dirent *dir = NULL;
-    int ret = 1;
+    int            ret = 1;
+    char           ev[128];
 
     static struct option long_options[] =  {
         {"verbose", no_argument,       &verbose_flag, 1},
         {"brief",   no_argument,       &verbose_flag, 0},
-        {"help",   no_argument,       0, 'h'},
-        {"evdev",  required_argument, 0, 'd'},
-        {"deadzone",  required_argument, 0, 'f'},
-        {"axis",  required_argument, 0, 'a'},
-        {"showcalibration",  required_argument, 0, 's'},
+        {"help",    no_argument,       0, 'h'},
+        {"dev",     required_argument, 0, 'd'},
+        {"dz",      required_argument, 0, 'f'},
+        {"axis",    required_argument, 0, 'a'},
+        {"show",    no_argument,       0, 's'},
         {0, 0, 0, 0}
     };
 
@@ -287,18 +296,12 @@ int main (int argc, char **argv)
         }
         switch (c) {
             case 0:
-                /* If this option set a flag, do nothing else now. */
                 if (long_options[option_index].flag != 0)
                     break;
-                printf ("option %s", long_options[option_index].name);
-                if (optarg)
-                    printf (" with arg %s", optarg);
-                printf ("\n");
                 break;
 
             case 'a':
-                axisindex=atoi(optarg);
-                printf ("axis index to deal with: %d\n", axisindex);
+                axisindex = atoi(optarg);
                 break;
 
             case 'h':
@@ -306,19 +309,16 @@ int main (int argc, char **argv)
                 break;
 
             case 'd':
-                evdevice=optarg;
-                printf ("event device file: %s\n", evdevice);
+                dev = optarg;
                 break;
 
             case 'f':
-                flat=atoi(optarg);
+                flat = atoi(optarg);
                 setdeadzone=true;
-                printf ("new dead zone value: %d\n", flat);
                 break;
 
             case 's':
-                evdevice=optarg;
-                show_calibration(evdevice);
+                show = true;
                 break;
 
             case '?':
@@ -329,19 +329,20 @@ int main (int argc, char **argv)
                 goto END;
         }
     }
-
-    if (setdeadzone) {
-        if (evdevice == NULL) {
+    if (show) {
+        if (dev == NULL) {
             d = opendir("/dev/input");
             if (d == NULL) {
-                perror("opendir");
+                perror("Opendir");
                 goto END;
             }
             dir = readdir(d);
             while (dir) {
-                if (dir->d_type == DT_REG) {
-                    printf ("trying to set axis %d deadzone to: %d on %s\n",axisindex, flat, dir->d_name);
-                    set_dead_zone_value(dir->d_name,axisindex,flat);
+                if (dir->d_type == DT_CHR) {
+                    memset(ev, 0, sizeof(ev));
+                    snprintf(ev, sizeof(ev) - 1, "/dev/input/%s", dir->d_name);
+                    printf ("Current calibration on %s:\n", ev);
+                    show_calibration(ev);
                 }
                 dir = readdir(d);   
             }
@@ -349,8 +350,34 @@ int main (int argc, char **argv)
             d = NULL;
         }
         else {
-            printf ("trying to set axis %d deadzone to: %d on %s\n",axisindex,flat, evdevice);
-            set_dead_zone_value(evdevice,axisindex,flat);            
+            printf ("Current calibration on %s:\n",dev);
+            show_calibration(dev);            
+        }
+    }
+
+    if (setdeadzone) {
+        if (dev == NULL) {
+            d = opendir("/dev/input");
+            if (d == NULL) {
+                perror("Opendir");
+                goto END;
+            }
+            dir = readdir(d);
+            while (dir) {
+                if (dir->d_type == DT_CHR) {
+                    memset(ev, 0, sizeof(ev));
+                    snprintf(ev, sizeof(ev) - 1, "/dev/input/%s", dir->d_name);
+                    printf ("Set deadzone to %d on %s\n", flat, ev);
+                    set_dead_zone_value(ev, axisindex, flat);
+                }
+                dir = readdir(d);   
+            }
+            closedir(d);
+            d = NULL;
+        }
+        else {
+            printf ("Set deadzone to %d on %s\n", flat, dev);
+            set_dead_zone_value(dev, axisindex, flat);            
         }
     }
     ret = 0;
