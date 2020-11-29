@@ -11,7 +11,7 @@ jdzone [options]
   
   --brief                                               Concise mode.
   
-  [--dev=/dev/input/<eventn>] --show                    Show the calibration values for the specified joystick.
+  [--dev=/dev/input/eventn] --show                    Show the calibration values for the specified joystick.
   
-  [--dev=/dev/input/<eventn>] --dz=value [--axis=index] Set the deadzone value (for specific axis).
+  [--dev=/dev/input/eventn] --dz=value [--axis=index] Set the deadzone value (for specific axis).
   
